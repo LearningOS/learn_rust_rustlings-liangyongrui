@@ -16,8 +16,6 @@
 // 4. Complete the partial implementation of `Display` for
 //    `ParseClimateError`.
 
-// I AM NOT DONE
-
 use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 use std::num::{ParseFloatError, ParseIntError};
@@ -46,7 +44,7 @@ impl From<ParseIntError> for ParseClimateError {
 // `ParseFloatError` values.
 impl From<ParseFloatError> for ParseClimateError {
     fn from(e: ParseFloatError) -> Self {
-        // TODO: Complete this function
+        ParseClimateError::ParseFloat(e)
     }
 }
 
@@ -64,6 +62,19 @@ impl Display for ParseClimateError {
         match self {
             NoCity => write!(f, "no city name"),
             ParseFloat(e) => write!(f, "error parsing temperature: {}", e),
+            Empty => write!(f, "empty input"),
+            BadLen => write!(f, "incorrect number of fields",),
+            ParseInt(e) => write!(f, "error parsing year: {}", e),
+        }
+    }
+}
+
+impl ParseClimateError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            ParseClimateError::ParseInt(e) => Some(e),
+            ParseClimateError::ParseFloat(e) => Some(e),
+            _ => None,
         }
     }
 }
@@ -90,7 +101,9 @@ impl FromStr for Climate {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let v: Vec<_> = s.split(',').collect();
         let (city, year, temp) = match &v[..] {
+            [city, year, temp] if city.is_empty() => return Err(ParseClimateError::NoCity),
             [city, year, temp] => (city.to_string(), year, temp),
+            [""] => return Err(ParseClimateError::Empty),
             _ => return Err(ParseClimateError::BadLen),
         };
         let year: u32 = year.parse()?;
@@ -102,7 +115,7 @@ impl FromStr for Climate {
 // Don't change anything below this line (other than to enable ignored
 // tests).
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), ParseClimateError> {
     println!("{:?}", "Hong Kong,1999,25.7".parse::<Climate>()?);
     println!("{:?}", "".parse::<Climate>()?);
     Ok(())
